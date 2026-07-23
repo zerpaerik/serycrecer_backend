@@ -7,6 +7,7 @@ import { UsuariosModule } from './usuarios/usuarios.module';
 import { PsicologosModule } from './psicologos/psicologos.module';
 import { ServiciosModule } from './servicios/servicios.module';
 import { PaquetesModule } from './paquetes/paquetes.module';
+import { PaquetesPacienteModule } from './paquetes-paciente/paquetes-paciente.module';
 import { PacientesModule } from './pacientes/pacientes.module';
 import { CitasModule } from './citas/citas.module';
 import { AtencionesModule } from './atenciones/atenciones.module';
@@ -23,6 +24,7 @@ import { ConfigAppModule } from './config/config.module';
     PsicologosModule,
     ServiciosModule,
     PaquetesModule,
+    PaquetesPacienteModule,
     PacientesModule,
     CitasModule,
     AtencionesModule,

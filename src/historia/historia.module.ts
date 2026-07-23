@@ -47,6 +47,10 @@ class UpdateEvolucionDto extends PartialType(CreateEvolucionDto) {}
 export class HistoriaService {
   constructor(private readonly prisma: PrismaService) {}
 
+  listEvaluaciones() {
+    return this.prisma.evaluacionNeuro.findMany();
+  }
+
   async getEvaluacion(pacienteId: number) {
     const ev = await this.prisma.evaluacionNeuro.findUnique({ where: { pacienteId } });
     return ev ?? { pacienteId, respuestas: {}, objetivos: [], obsConducta: null, obsFamilia: null, obsEscolar: null, informe: null };
@@ -100,6 +104,10 @@ export class HistoriaService {
 export class HistoriaController {
   constructor(private readonly service: HistoriaService) {}
 
+  @Get('evaluaciones')
+  listEvaluaciones() {
+    return this.service.listEvaluaciones();
+  }
   @Get('evaluaciones/:pacienteId')
   getEvaluacion(@Param('pacienteId', ParseIntPipe) pacienteId: number) {
     return this.service.getEvaluacion(pacienteId);
