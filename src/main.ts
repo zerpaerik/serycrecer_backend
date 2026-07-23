@@ -5,6 +5,8 @@ process.env.TZ = process.env.TZ || 'America/Lima';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { PrismaService } from './prisma/prisma.service';
+import { ensureBaseData } from './seed/bootstrap';
 
 function corsOrigins(): string[] {
   return (process.env.CORS_ORIGIN || 'http://localhost:3000')
@@ -36,6 +38,14 @@ async function bootstrap() {
       return cb(null, false);
     },
   });
+
+  // Garantiza datos base (roles, usuarios demo, catálogos) de forma idempotente.
+  try {
+    await ensureBaseData(app.get(PrismaService));
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.error('No se pudo asegurar los datos base:', e);
+  }
 
   const port = process.env.PORT ? Number(process.env.PORT) : 3001;
   await app.listen(port, '0.0.0.0');

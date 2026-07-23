@@ -10,6 +10,8 @@ import { PaquetesModule } from './paquetes/paquetes.module';
 import { PacientesModule } from './pacientes/pacientes.module';
 import { CitasModule } from './citas/citas.module';
 import { AtencionesModule } from './atenciones/atenciones.module';
+import { HistoriaModule } from './historia/historia.module';
+import { ReportesModule } from './reportes/reportes.module';
 import { ConfigAppModule } from './config/config.module';
 
 @Module({
@@ -24,6 +26,8 @@ import { ConfigAppModule } from './config/config.module';
     PacientesModule,
     CitasModule,
     AtencionesModule,
+    HistoriaModule,
+    ReportesModule,
     ConfigAppModule,
   ],
   controllers: [AppController],
