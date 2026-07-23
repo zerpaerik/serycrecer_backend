@@ -1,0 +1,245 @@
+// Esquema de la base de datos — Centro Neuropsicológico "Ser y Crecer".
+// Modela lo que el frontend ya usa: pacientes, psicólogos, servicios,
+// paquetes de sesiones, citas, atenciones (ítems + pagos/abonos),
+// historia clínica (evaluación neuropsicológica) y configuración.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────── Auth ───────────────
+
+model Role {
+  id          Int    @id // ids fijos: 1 Admin, 2 Psicólogo, 3 Recepción
+  nombre      String
+  short       String
+  descripcion String?
+  color       String
+  users       User[]
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  email     String   @unique
+  password  String
+  title     String?
+  estado    String   @default("Activo") // Activo | Inactivo
+  roleId    Int
+  role      Role     @relation(fields: [roleId], references: [id])
+  atenciones Atencion[]
+  pagos     Pago[]
+  createdAt DateTime @default(now())
+}
+
+// ─────────────── Catálogos ───────────────
+
+model Psicologo {
+  id           Int     @id @default(autoincrement())
+  nombre       String
+  especialidad String
+  color        String
+  email        String?
+  telefono     String?
+  horario      String?
+  citas        Cita[]
+  atenciones   Atencion[]
+  evoluciones  EvolucionSesion[]
+}
+
+model Servicio {
+  id          Int      @id @default(autoincrement())
+  nombre      String
+  duracionMin Int
+  precio      Decimal  @db.Decimal(10, 2)
+  color       String
+  paquetes    Paquete[]
+  citas       Cita[]
+}
+
+model Paquete {
+  id         Int     @id @default(autoincrement())
+  nombre     String
+  sesiones   Int
+  precio     Decimal @db.Decimal(10, 2)
+  color      String
+  servicioId Int?
+  servicio   Servicio? @relation(fields: [servicioId], references: [id])
+  instancias PaquetePaciente[]
+}
+
+model PaquetePaciente {
+  id            Int      @id @default(autoincrement())
+  pacienteId    Int
+  paciente      Paciente @relation(fields: [pacienteId], references: [id])
+  paqueteId     Int
+  paquete       Paquete  @relation(fields: [paqueteId], references: [id])
+  nombre        String
+  totalSesiones Int
+  precio        Decimal  @db.Decimal(10, 2)
+  fecha         String // YYYY-MM-DD
+  atencionId    Int?
+  citas         Cita[]
+  createdAt     DateTime @default(now())
+}
+
+// ─────────────── Pacientes ───────────────
+
+model Paciente {
+  id                Int      @id @default(autoincrement())
+  tipoDoc           String   @default("DNI") // DNI | CE | Pasaporte
+  numDoc            String
+  nombres           String
+  apellidos         String
+  sexo              String   @default("Femenino")
+  fechaNacimiento   String? // YYYY-MM-DD
+  telefono          String   @default("")
+  email             String?
+  direccion         String?
+  contactoNombre    String?
+  contactoTelefono  String?
+  motivoConsulta    String?
+  estado            String   @default("Activo") // Activo | Inactivo
+  citas             Cita[]
+  atenciones        Atencion[]
+  paquetes          PaquetePaciente[]
+  evaluacion        EvaluacionNeuro?
+  evoluciones       EvolucionSesion[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([numDoc])
+}
+
+// ─────────────── Citas ───────────────
+
+model Cita {
+  id                Int      @id @default(autoincrement())
+  pacienteId        Int
+  paciente          Paciente @relation(fields: [pacienteId], references: [id])
+  psicologoId       Int
+  psicologo         Psicologo @relation(fields: [psicologoId], references: [id])
+  servicioId        Int
+  servicio          Servicio @relation(fields: [servicioId], references: [id])
+  fecha             String // YYYY-MM-DD
+  hora              String // HH:mm
+  estado            String   @default("Agendada") // Agendada | Confirmada | Atendida | No asistió | Cancelada
+  tardanza          Boolean  @default(false)
+  paquetePacienteId Int?
+  paquetePaciente   PaquetePaciente? @relation(fields: [paquetePacienteId], references: [id])
+  notas             String?
+  createdAt         DateTime @default(now())
+
+  @@index([fecha])
+  @@index([pacienteId])
+}
+
+// ─────────────── Atenciones (ítems + pagos) ───────────────
+
+model Atencion {
+  id              Int      @id @default(autoincrement())
+  pacienteId      Int
+  paciente        Paciente @relation(fields: [pacienteId], references: [id])
+  psicologoId     Int
+  psicologo       Psicologo @relation(fields: [psicologoId], references: [id])
+  citaId          Int?
+  fecha           String // YYYY-MM-DD
+  hora            String?
+  observaciones   String?
+  total           Decimal  @default(0) @db.Decimal(10, 2)
+  pagado          Decimal  @default(0) @db.Decimal(10, 2)
+  saldo           Decimal  @default(0) @db.Decimal(10, 2)
+  estado          String   @default("Pendiente") // Pagado | Parcial | Pendiente
+  anulada         Boolean  @default(false)
+  anuladaAt       DateTime?
+  motivoAnulacion String?
+  usuarioId       Int?
+  usuario         User?    @relation(fields: [usuarioId], references: [id])
+  items           AtencionItem[]
+  pagos           Pago[]
+  createdAt       DateTime @default(now())
+
+  @@index([fecha])
+  @@index([pacienteId])
+  @@index([anulada])
+}
+
+model AtencionItem {
+  id         Int      @id @default(autoincrement())
+  atencionId Int
+  atencion   Atencion @relation(fields: [atencionId], references: [id], onDelete: Cascade)
+  tipo       String // Servicio | Paquete
+  nombre     String
+  monto      Decimal  @db.Decimal(10, 2)
+  servicioId Int?
+  paqueteId  Int?
+}
+
+model Pago {
+  id         Int      @id @default(autoincrement())
+  atencionId Int?
+  atencion   Atencion? @relation(fields: [atencionId], references: [id], onDelete: Cascade)
+  monto      Decimal  @db.Decimal(10, 2)
+  metodo     String   @default("Efectivo") // Efectivo | Yape | Plin | Tarjeta | Transferencia
+  tipo       String   @default("Abono inicial") // Abono inicial | Cobro
+  fecha      String // YYYY-MM-DD
+  anulado    Boolean  @default(false)
+  usuarioId  Int?
+  usuario    User?    @relation(fields: [usuarioId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([fecha])
+}
+
+// ─────────────── Historia clínica ───────────────
+
+// Evaluación neuropsicológica estructurada (respuestas por id de campo del
+// instrumento) + objetivos del plan de trabajo. Una por paciente.
+model EvaluacionNeuro {
+  id          Int      @id @default(autoincrement())
+  pacienteId  Int      @unique
+  paciente    Paciente @relation(fields: [pacienteId], references: [id])
+  respuestas  Json     @default("{}")
+  objetivos   Json     @default("[]")
+  obsConducta String?
+  obsFamilia  String?
+  obsEscolar  String?
+  informe     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model EvolucionSesion {
+  id            Int      @id @default(autoincrement())
+  pacienteId    Int
+  paciente      Paciente @relation(fields: [pacienteId], references: [id])
+  psicologoId   Int
+  psicologo     Psicologo @relation(fields: [psicologoId], references: [id])
+  atencionId    Int?
+  fecha         String // YYYY-MM-DD
+  hora          String
+  motivo        String?
+  observaciones String
+  acuerdos      String?
+  createdAt     DateTime @default(now())
+
+  @@index([pacienteId])
+}
+
+// ─────────────── Configuración (singleton) ───────────────
+
+model Config {
+  id        Int    @id @default(1)
+  nombre    String @default("Ser y Crecer")
+  ruc       String?
+  direccion String?
+  telefono  String?
+  email     String?
+  horario   String?
+  moneda    String @default("PEN")
+}
