@@ -66,6 +66,14 @@ export async function ensureBaseData(prisma: PrismaService) {
       prisma.servicio.create({ data: { nombre: 'Terapia infantil', duracionMin: 45, precio: D(90), color: '#f4b21f' } }),
       prisma.servicio.create({ data: { nombre: 'Terapia familiar', duracionMin: 60, precio: D(160), color: '#e8774a' } }),
     ]);
+    // Disponibilidad semanal demo (Lun–Vie mañana y tarde) para cada psicólogo.
+    for (const psi of [psi1, psi2, psi3]) {
+      for (const dia of [1, 2, 3, 4, 5]) {
+        await prisma.disponibilidad.create({ data: { psicologoId: psi.id, diaSemana: dia, horaInicio: '09:00', horaFin: '13:00', duracionMin: 60 } });
+        await prisma.disponibilidad.create({ data: { psicologoId: psi.id, diaSemana: dia, horaInicio: '15:00', horaFin: '19:00', duracionMin: 60 } });
+      }
+    }
+
     const paq1 = await prisma.paquete.create({ data: { nombre: 'Paquete 4 sesiones · Terapia individual', sesiones: 4, precio: D(280), color: '#14a89c', servicioId: srv[0].id } });
     await prisma.paquete.create({ data: { nombre: 'Paquete 8 sesiones · Terapia individual', sesiones: 8, precio: D(520), color: '#2b83c2', servicioId: srv[0].id } });
     await prisma.paquete.create({ data: { nombre: 'Paquete 4 sesiones · Terapia infantil', sesiones: 4, precio: D(300), color: '#4fa64a', servicioId: srv[3].id } });

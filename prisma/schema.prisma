@@ -40,16 +40,31 @@ model User {
 // ─────────────── Catálogos ───────────────
 
 model Psicologo {
-  id           Int     @id @default(autoincrement())
-  nombre       String
-  especialidad String
-  color        String
-  email        String?
-  telefono     String?
-  horario      String?
-  citas        Cita[]
-  atenciones   Atencion[]
-  evoluciones  EvolucionSesion[]
+  id             Int     @id @default(autoincrement())
+  nombre         String
+  especialidad   String
+  color          String
+  email          String?
+  telefono       String?
+  horario        String?
+  citas          Cita[]
+  atenciones     Atencion[]
+  evoluciones    EvolucionSesion[]
+  disponibilidad Disponibilidad[]
+}
+
+// Franja de disponibilidad semanal recurrente de un psicólogo.
+model Disponibilidad {
+  id          Int       @id @default(autoincrement())
+  psicologoId Int
+  psicologo   Psicologo @relation(fields: [psicologoId], references: [id], onDelete: Cascade)
+  diaSemana   Int // 0=Domingo … 6=Sábado (JS getDay)
+  horaInicio  String // HH:mm
+  horaFin     String // HH:mm
+  duracionMin Int       @default(60)
+  createdAt   DateTime  @default(now())
+
+  @@index([psicologoId])
 }
 
 model Servicio {

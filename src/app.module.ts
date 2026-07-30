@@ -13,6 +13,7 @@ import { CitasModule } from './citas/citas.module';
 import { AtencionesModule } from './atenciones/atenciones.module';
 import { HistoriaModule } from './historia/historia.module';
 import { ReportesModule } from './reportes/reportes.module';
+import { DisponibilidadModule } from './disponibilidad/disponibilidad.module';
 import { ConfigAppModule } from './config/config.module';
 
 @Module({
@@ -30,6 +31,7 @@ import { ConfigAppModule } from './config/config.module';
     AtencionesModule,
     HistoriaModule,
     ReportesModule,
+    DisponibilidadModule,
     ConfigAppModule,
   ],
   controllers: [AppController],
