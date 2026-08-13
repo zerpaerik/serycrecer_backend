@@ -217,12 +217,13 @@ export class AtencionesService {
 
   async update(id: number, dto: UpdateAtencionDto) {
     await this.findOne(id);
-    // Solo se editan cabecera/observaciones aquí (los cobros van por su ruta).
-    return this.prisma.atencion.update({
-      where: { id },
-      data: { observaciones: dto.observaciones, hora: dto.hora },
-      include: INCLUDE,
-    });
+    // Se editan datos de cabecera (los cobros van por su ruta).
+    const data: Record<string, unknown> = {};
+    if (dto.observaciones !== undefined) data.observaciones = dto.observaciones;
+    if (dto.hora !== undefined) data.hora = dto.hora;
+    if (dto.fecha !== undefined) data.fecha = dto.fecha;
+    if (dto.psicologoId !== undefined) data.psicologoId = dto.psicologoId;
+    return this.prisma.atencion.update({ where: { id }, data, include: INCLUDE });
   }
 }
 
