@@ -108,6 +108,30 @@ export async function ensureBaseData(prisma: PrismaService) {
     }
   }
 
+  // Enlace usuario psicólogo ↔ ficha de psicólogo (para su licencia y datos).
+  const psiUser = await prisma.user.findUnique({ where: { email: 'psicologo@serycrecer.pe' } });
+  if (psiUser && !psiUser.psicologoId) {
+    const ficha = await prisma.psicologo.findFirst({
+      where: { OR: [{ email: 'psicologo@serycrecer.pe' }, { nombre: 'Lic. Camila Torres' }] },
+    });
+    if (ficha) {
+      await prisma.user.update({ where: { id: psiUser.id }, data: { psicologoId: ficha.id } });
+      if (!ficha.licencia) {
+        await prisma.psicologo.update({ where: { id: ficha.id }, data: { licencia: 'C.Ps.P. 12345' } });
+      }
+    }
+  }
+
+  // Gastos demo (solo si no hay ninguno) para que la caja del día cuadre.
+  if ((await prisma.gasto.count()) === 0) {
+    await prisma.gasto.createMany({
+      data: [
+        { fecha: iso(0), monto: D(45), categoria: 'Insumos', metodo: 'Efectivo', descripcion: 'Materiales de oficina' },
+        { fecha: iso(0), monto: D(30), categoria: 'Servicios', metodo: 'Yape', descripcion: 'Agua y café para sala de espera' },
+      ],
+    });
+  }
+
   // eslint-disable-next-line no-console
   console.log('✔ Datos base verificados (roles, usuarios demo, catálogos).');
 }

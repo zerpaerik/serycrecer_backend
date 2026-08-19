@@ -1,10 +1,12 @@
 import {
+  BadRequestException,
   CanActivate,
   Controller,
   ExecutionContext,
   Get,
   Injectable,
   Module,
+  Patch,
   Post,
   Body,
   Req,
@@ -12,7 +14,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtModule, JwtService } from '@nestjs/jwt';
-import { IsString } from 'class-validator';
+import { IsOptional, IsString, MinLength } from 'class-validator';
 import * as bcrypt from 'bcryptjs';
 import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
@@ -23,6 +25,20 @@ class LoginDto {
 
   @IsString()
   password: string;
+}
+
+class ChangePasswordDto {
+  @IsString()
+  actual: string;
+
+  @IsString()
+  @MinLength(6, { message: 'La nueva contraseña debe tener al menos 6 caracteres' })
+  nueva: string;
+}
+
+class UpdatePerfilDto {
+  @IsOptional() @IsString() nombre?: string;
+  @IsOptional() @IsString() licencia?: string;
 }
 
 // Guard JWT hecho a mano (sin Passport), como en el molde de intimas.
@@ -79,10 +95,39 @@ export class AuthService {
   async me(userId: number) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: { role: true },
+      include: { role: true, psicologo: true },
     });
     if (!user) throw new UnauthorizedException();
-    return this.sanitize(user);
+    const clean = this.sanitize(user);
+    // Expone la licencia del psicólogo enlazado a nivel de usuario.
+    return { ...clean, licencia: user.psicologo?.licencia ?? null };
+  }
+
+  async changePassword(userId: number, dto: ChangePasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+    if (!(await bcrypt.compare(dto.actual, user.password))) {
+      throw new BadRequestException('La contraseña actual no es correcta');
+    }
+    const password = await bcrypt.hash(dto.nueva, 10);
+    await this.prisma.user.update({ where: { id: userId }, data: { password } });
+    return { ok: true };
+  }
+
+  async updatePerfil(userId: number, dto: UpdatePerfilDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new UnauthorizedException();
+    if (dto.nombre !== undefined) {
+      await this.prisma.user.update({ where: { id: userId }, data: { nombre: dto.nombre } });
+    }
+    // La licencia vive en la ficha de psicólogo enlazada (si existe).
+    if (dto.licencia !== undefined && user.psicologoId) {
+      await this.prisma.psicologo.update({
+        where: { id: user.psicologoId },
+        data: { licencia: dto.licencia },
+      });
+    }
+    return this.me(userId);
   }
 }
 
@@ -99,6 +144,24 @@ export class AuthController {
   @Get('me')
   me(@Req() req: Request) {
     return this.service.me((req as any).user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('perfil')
+  perfil(@Req() req: Request) {
+    return this.service.me((req as any).user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('perfil')
+  updatePerfil(@Req() req: Request, @Body() dto: UpdatePerfilDto) {
+    return this.service.updatePerfil((req as any).user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  changePassword(@Req() req: Request, @Body() dto: ChangePasswordDto) {
+    return this.service.changePassword((req as any).user.sub, dto);
   }
 }
 

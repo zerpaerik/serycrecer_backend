@@ -15,6 +15,7 @@ import { HistoriaModule } from './historia/historia.module';
 import { ReportesModule } from './reportes/reportes.module';
 import { DisponibilidadModule } from './disponibilidad/disponibilidad.module';
 import { ConfigAppModule } from './config/config.module';
+import { GastosModule } from './gastos/gastos.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { ConfigAppModule } from './config/config.module';
     ReportesModule,
     DisponibilidadModule,
     ConfigAppModule,
+    GastosModule,
   ],
   controllers: [AppController],
 })

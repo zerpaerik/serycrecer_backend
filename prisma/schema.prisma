@@ -32,8 +32,12 @@ model User {
   estado    String   @default("Activo") // Activo | Inactivo
   roleId    Int
   role      Role     @relation(fields: [roleId], references: [id])
+  // Enlace opcional a la ficha de psicólogo (para su licencia y datos clínicos).
+  psicologoId Int?      @unique
+  psicologo   Psicologo? @relation(fields: [psicologoId], references: [id])
   atenciones Atencion[]
   pagos     Pago[]
+  gastos    Gasto[]
   createdAt DateTime @default(now())
 }
 
@@ -47,10 +51,12 @@ model Psicologo {
   email          String?
   telefono       String?
   horario        String?
+  licencia       String? // N° de colegiatura / licencia profesional
   citas          Cita[]
   atenciones     Atencion[]
   evoluciones    EvolucionSesion[]
   disponibilidad Disponibilidad[]
+  usuario        User?
 }
 
 // Franja de disponibilidad semanal recurrente de un psicólogo.
@@ -257,4 +263,20 @@ model Config {
   email     String?
   horario   String?
   moneda    String @default("PEN")
+}
+
+// ─────────────── Gastos / egresos ───────────────
+
+model Gasto {
+  id          Int      @id @default(autoincrement())
+  fecha       String // YYYY-MM-DD
+  monto       Decimal  @db.Decimal(10, 2)
+  categoria   String   @default("Operativo")
+  metodo      String   @default("Efectivo") // Efectivo | Yape | Plin | Tarjeta | Transferencia
+  descripcion String?
+  usuarioId   Int?
+  usuario     User?    @relation(fields: [usuarioId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([fecha])
 }

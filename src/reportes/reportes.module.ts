@@ -66,24 +66,37 @@ export class ReportesService {
   }
 
   async caja(fecha: string) {
-    const pagos = await this.prisma.pago.findMany({
-      where: { anulado: false, fecha, atencion: { is: { anulada: false } } },
-      include: { atencion: { include: { paciente: true } } },
-    });
+    const [pagos, gastos] = await Promise.all([
+      this.prisma.pago.findMany({
+        where: { anulado: false, fecha, atencion: { is: { anulada: false } } },
+        include: { atencion: { include: { paciente: true } } },
+      }),
+      this.prisma.gasto.findMany({ where: { fecha }, orderBy: { createdAt: 'asc' } }),
+    ]);
     const total = pagos.reduce((s, p) => s + N(p.monto), 0);
     const porMetodo: Record<string, number> = {};
     for (const p of pagos) porMetodo[p.metodo] = (porMetodo[p.metodo] ?? 0) + N(p.monto);
+    const totalGastos = gastos.reduce((s, g) => s + N(g.monto), 0);
     return {
       fecha,
       total,
       count: pagos.length,
       porMetodo,
+      totalGastos,
+      neto: total - totalGastos,
       pagos: pagos.map((p) => ({
         id: p.id,
         monto: N(p.monto),
         metodo: p.metodo,
         tipo: p.tipo,
         paciente: p.atencion ? `${p.atencion.paciente.nombres} ${p.atencion.paciente.apellidos}` : '—',
+      })),
+      gastos: gastos.map((g) => ({
+        id: g.id,
+        monto: N(g.monto),
+        categoria: g.categoria,
+        metodo: g.metodo,
+        descripcion: g.descripcion ?? '',
       })),
     };
   }
