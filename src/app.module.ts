@@ -16,6 +16,7 @@ import { ReportesModule } from './reportes/reportes.module';
 import { DisponibilidadModule } from './disponibilidad/disponibilidad.module';
 import { ConfigAppModule } from './config/config.module';
 import { GastosModule } from './gastos/gastos.module';
+import { CajaModule } from './caja/caja.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { GastosModule } from './gastos/gastos.module';
     DisponibilidadModule,
     ConfigAppModule,
     GastosModule,
+    CajaModule,
   ],
   controllers: [AppController],
 })

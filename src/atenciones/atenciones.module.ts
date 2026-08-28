@@ -72,6 +72,16 @@ const INCLUDE = {
 export class AtencionesService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Turno de caja abierto (para asociar los pagos al turno en curso). */
+  private async turnoAbiertoId(): Promise<number | undefined> {
+    const t = await this.prisma.cajaTurno.findFirst({
+      where: { estado: 'Abierto' },
+      orderBy: { abiertoEn: 'desc' },
+      select: { id: true },
+    });
+    return t?.id;
+  }
+
   private async recompute(tx: Prisma.TransactionClient, atencionId: number) {
     const atn = await tx.atencion.findUnique({
       where: { id: atencionId },
@@ -117,6 +127,7 @@ export class AtencionesService {
   async create(dto: CreateAtencionDto, userId?: number) {
     const fecha = dto.fecha ?? hoy();
     const fechaPago = hoy();
+    const turnoId = await this.turnoAbiertoId();
     const id = await this.prisma.$transaction(async (tx) => {
       const atn = await tx.atencion.create({
         data: {
@@ -149,6 +160,7 @@ export class AtencionesService {
             tipo: 'Abono inicial',
             fecha: fechaPago,
             usuarioId: userId,
+            turnoId,
           })),
         });
       }
@@ -186,9 +198,10 @@ export class AtencionesService {
     const monto = D(dto.monto);
     if (monto.lte(0)) throw new BadRequestException('Monto inválido');
     if (monto.gt(saldo)) throw new BadRequestException('El abono supera el saldo');
+    const turnoId = await this.turnoAbiertoId();
     await this.prisma.$transaction(async (tx) => {
       await tx.pago.create({
-        data: { atencionId: id, monto, metodo: dto.metodo, tipo: 'Cobro', fecha: hoy(), usuarioId: userId },
+        data: { atencionId: id, monto, metodo: dto.metodo, tipo: 'Cobro', fecha: hoy(), usuarioId: userId, turnoId },
       });
       await this.recompute(tx, id);
     });

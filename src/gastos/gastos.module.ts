@@ -58,7 +58,13 @@ export class GastosService {
     return g;
   }
 
-  create(dto: CreateGastoDto, userId?: number) {
+  async create(dto: CreateGastoDto, userId?: number) {
+    // Se asocia al turno de caja abierto (si lo hay) para cuadrar el cierre.
+    const turno = await this.prisma.cajaTurno.findFirst({
+      where: { estado: 'Abierto' },
+      orderBy: { abiertoEn: 'desc' },
+      select: { id: true },
+    });
     return this.prisma.gasto.create({
       data: {
         fecha: dto.fecha ?? hoy(),
@@ -67,6 +73,7 @@ export class GastosService {
         metodo: dto.metodo ?? 'Efectivo',
         descripcion: dto.descripcion,
         usuarioId: userId,
+        turnoId: turno?.id,
       },
       include: INCLUDE,
     });

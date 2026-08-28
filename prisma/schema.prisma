@@ -38,6 +38,8 @@ model User {
   atenciones Atencion[]
   pagos     Pago[]
   gastos    Gasto[]
+  turnosAbiertos CajaTurno[] @relation("TurnoApertura")
+  turnosCerrados CajaTurno[] @relation("TurnoCierre")
   createdAt DateTime @default(now())
 }
 
@@ -52,6 +54,7 @@ model Psicologo {
   telefono       String?
   horario        String?
   licencia       String? // N° de colegiatura / licencia profesional
+  estado         String  @default("Activo") // Activo | Inactivo
   citas          Cita[]
   atenciones     Atencion[]
   evoluciones    EvolucionSesion[]
@@ -212,6 +215,8 @@ model Pago {
   anulado    Boolean  @default(false)
   usuarioId  Int?
   usuario    User?    @relation(fields: [usuarioId], references: [id])
+  turnoId    Int?
+  turno      CajaTurno? @relation(fields: [turnoId], references: [id])
   createdAt  DateTime @default(now())
 
   @@index([fecha])
@@ -276,7 +281,33 @@ model Gasto {
   descripcion String?
   usuarioId   Int?
   usuario     User?    @relation(fields: [usuarioId], references: [id])
+  turnoId     Int?
+  turno       CajaTurno? @relation(fields: [turnoId], references: [id])
   createdAt   DateTime @default(now())
+
+  @@index([fecha])
+}
+
+// ─────────────── Turnos de caja (apertura/cierre) ───────────────
+// Un día puede tener varios turnos (p. ej. mañana y tarde).
+
+model CajaTurno {
+  id             Int      @id @default(autoincrement())
+  fecha          String // YYYY-MM-DD
+  nombre         String   @default("Turno 1")
+  montoInicial   Decimal  @default(0) @db.Decimal(10, 2)
+  abiertoEn      DateTime @default(now())
+  cerradoEn      DateTime?
+  montoContado   Decimal? @db.Decimal(10, 2) // efectivo contado al cerrar
+  observaciones  String?
+  estado         String   @default("Abierto") // Abierto | Cerrado
+  usuarioAperturaId Int?
+  usuarioApertura   User?  @relation("TurnoApertura", fields: [usuarioAperturaId], references: [id])
+  usuarioCierreId   Int?
+  usuarioCierre     User?  @relation("TurnoCierre", fields: [usuarioCierreId], references: [id])
+  pagos          Pago[]
+  gastos         Gasto[]
+  createdAt      DateTime @default(now())
 
   @@index([fecha])
 }
