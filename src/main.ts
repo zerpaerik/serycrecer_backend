@@ -1,5 +1,7 @@
 import 'reflect-metadata';
-// Zona horaria del centro (Perú) antes de crear la app.
+// Zona horaria del centro (Perú). Node puede ignorarlo si ya cacheó la zona,
+// por eso las fechas del negocio se calculan con `src/common/fecha.ts`, que
+// fija America/Lima explícitamente.
 process.env.TZ = process.env.TZ || 'America/Lima';
 
 import { ValidationPipe } from '@nestjs/common';

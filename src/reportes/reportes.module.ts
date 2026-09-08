@@ -8,9 +8,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthModule, JwtAuthGuard } from '../auth/auth.module';
+import { hoyIso, isoDesplazado } from '../common/fecha';
 
 const N = (v: unknown) => Number(v ?? 0);
-const hoyIso = () => new Date().toLocaleDateString('en-CA');
+
 
 @Injectable()
 export class ReportesService {
@@ -104,11 +105,7 @@ export class ReportesService {
   async dashboard() {
     const hoy = hoyIso();
     const mesIni = hoy.slice(0, 8) + '01';
-    const hace30 = (() => {
-      const d = new Date();
-      d.setDate(d.getDate() - 30);
-      return d.toLocaleDateString('en-CA');
-    })();
+    const hace30 = isoDesplazado(-30);
 
     const [citasHoy, pagosMes, pacientesActivos, atenciones, citasRecientes] = await Promise.all([
       this.prisma.cita.count({ where: { fecha: hoy } }),

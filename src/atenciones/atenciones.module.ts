@@ -29,10 +29,11 @@ import { Prisma } from '@prisma/client';
 import type { Request } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthModule, JwtAuthGuard } from '../auth/auth.module';
+import { hoyIso } from '../common/fecha';
 
 const D = (v: Prisma.Decimal.Value) => new Prisma.Decimal(v);
 /** Fecha local (Lima) en formato YYYY-MM-DD. */
-const hoy = () => new Date().toLocaleDateString('en-CA');
+const hoy = hoyIso;
 
 class ItemDto {
   @IsString() tipo: string; // Servicio | Paquete

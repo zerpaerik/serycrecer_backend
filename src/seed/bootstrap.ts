@@ -1,13 +1,10 @@
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { isoDesplazado } from '../common/fecha';
 
 const D = (v: number) => new Prisma.Decimal(v);
-const iso = (off = 0) => {
-  const d = new Date();
-  d.setDate(d.getDate() + off);
-  return d.toLocaleDateString('en-CA');
-};
+const iso = (off = 0) => isoDesplazado(off);
 
 /**
  * Crea los datos base de forma idempotente al arrancar la app.
