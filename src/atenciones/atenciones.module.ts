@@ -18,6 +18,7 @@ import { PartialType } from '@nestjs/mapped-types';
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -60,6 +61,15 @@ class UpdateAtencionDto extends PartialType(CreateAtencionDto) {}
 class PagoDto extends PagoInputDto {}
 class AnularDto {
   @IsString() motivo: string;
+}
+
+/** Métodos de pago válidos (los mismos que ofrece el frontend). */
+const METODOS_PAGO = ['Efectivo', 'Yape', 'Plin', 'Tarjeta', 'Transferencia'];
+
+/** Corrección del método con que se registró un cobro. */
+class UpdatePagoDto {
+  @IsIn(METODOS_PAGO, { message: `El método debe ser uno de: ${METODOS_PAGO.join(', ')}` })
+  metodo: string;
 }
 
 const INCLUDE = {
@@ -209,6 +219,25 @@ export class AtencionesService {
     return this.findOne(id);
   }
 
+  /**
+   * Corrige el método con que se registró un cobro (p. ej. se anotó Efectivo
+   * pero fue Yape). No cambia el monto, así que el total y el saldo no varían;
+   * sí se refleja en el cuadre de caja del turno al que pertenece el pago.
+   */
+  async updatePago(atencionId: number, pagoId: number, dto: UpdatePagoDto) {
+    const atn = await this.findOne(atencionId);
+    if (atn.anulada) throw new BadRequestException('La atención está anulada');
+
+    const pago = await this.prisma.pago.findUnique({ where: { id: pagoId } });
+    if (!pago || pago.atencionId !== atencionId) {
+      throw new NotFoundException(`Pago #${pagoId} no encontrado en esta atención`);
+    }
+    if (pago.anulado) throw new BadRequestException('Ese pago está anulado');
+
+    await this.prisma.pago.update({ where: { id: pagoId }, data: { metodo: dto.metodo } });
+    return this.findOne(atencionId);
+  }
+
   async anular(id: number, motivo: string) {
     const atn = await this.findOne(id);
     if (atn.anulada) throw new BadRequestException('La atención ya está anulada');
@@ -264,6 +293,13 @@ export class AtencionesController {
     @Req() req: Request,
   ) {
     return this.service.addPago(id, dto, (req as any).user?.sub);
+  }
+  @UseGuards(JwtAuthGuard) @Patch(':id/pagos/:pagoId') updatePago(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('pagoId', ParseIntPipe) pagoId: number,
+    @Body() dto: UpdatePagoDto,
+  ) {
+    return this.service.updatePago(id, pagoId, dto);
   }
   @UseGuards(JwtAuthGuard) @Post(':id/anular') anular(
     @Param('id', ParseIntPipe) id: number,
