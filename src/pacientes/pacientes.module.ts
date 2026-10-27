@@ -53,7 +53,6 @@ export class PacientesService {
     return this.prisma.paciente.findMany({
       where,
       orderBy: { id: 'desc' },
-      take: 100,
     });
   }
 
